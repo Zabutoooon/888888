@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>0.8倍電卓</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 25px 15px;
+    font-family: sans-serif;
+    background: #f4f6f8;
+    color: #222;
+}
+
+.calculator {
+    max-width: 500px;
+    margin: auto;
+    padding: 25px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    margin: 0 0 25px;
+}
+
+
+/* 入力 */
+
+#expression {
+    width: 100%;
+    padding: 15px;
+    font-size: 26px;
+    text-align: right;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    outline: none;
+}
+
+#expression:focus {
+    border-color: #555;
+}
+
+
+/* ボタン */
+
+.calculate {
+    width: 100%;
+    margin-top: 12px;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: #333;
+    color: white;
+    font-size: 19px;
+    cursor: pointer;
+}
+
+.clear {
+    width: 100%;
+    margin-top: 8px;
+    padding: 11px;
+    border: none;
+    border-radius: 10px;
+    background: #ddd;
+    font-size: 17px;
+    cursor: pointer;
+}
+
+
+/* 結果 */
+
+.result {
+    margin-top: 25px;
+    padding: 20px;
+    background: #f0f2f4;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.result-title {
+    font-size: 14px;
+    color: #666;
+}
+
+#result {
+    margin-top: 5px;
+    font-size: 40px;
+    font-weight: bold;
+    word-break: break-all;
+}
+
+
+/* 履歴 */
+
+.history {
+    margin-top: 30px;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-header h2 {
+    margin: 0;
+    font-size: 21px;
+}
+
+.delete-all {
+    padding: 7px 10px;
+    border: none;
+    border-radius: 8px;
+    background: #ddd;
+    cursor: pointer;
+}
+
+.history-item {
+    margin-top: 10px;
+    padding: 13px;
+    background: #f4f4f4;
+    border-radius: 10px;
+}
+
+.calculation {
+    font-size: 17px;
+    word-break: break-all;
+}
+
+.delete-item {
+    margin-top: 8px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 6px;
+    background: #ddd;
+    cursor: pointer;
+}
+
+.empty-history {
+    text-align: center;
+    color: #888;
+    padding: 20px;
+}
+
+</style>
+</head>
+
+
+<body>
+
+<div class="calculator">
+
+    <h1>0.8倍電卓</h1>
+
+
+    <!-- 計算式入力 -->
+
+    <input
+        id="expression"
+        type="text"
+        inputmode="decimal"
+        placeholder="例：22.5-10"
+        autocomplete="off"
+    >
+
+
+    <!-- 計算 -->
+
+    <button
+        class="calculate"
+        onclick="calculate()"
+    >
+        計算
+    </button>
+
+
+    <!-- クリア -->
+
+    <button
+        class="clear"
+        onclick="clearInput()"
+    >
+        クリア
+    </button>
+
+
+    <!-- 結果 -->
+
+    <div class="result">
+
+        <div class="result-title">
+            0.8倍した結果
+        </div>
+
+        <div id="result">
+            —
+        </div>
+
+    </div>
+
+
+    <!-- 履歴 -->
+
+    <div class="history">
+
+        <div class="history-header">
+
+            <h2>計算履歴</h2>
+
+            <button
+                class="delete-all"
+                onclick="deleteAllHistory()"
+            >
+                履歴を全消去
+            </button>
+
+        </div>
+
+        <div id="historyList"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+/* =========================
+   0.8倍固定
+========================= */
+
+const MULTIPLIER = 0.8;
+
+
+/* =========================
+   要素
+========================= */
+
+const expressionInput =
+    document.getElementById("expression");
+
+const result =
+    document.getElementById("result");
+
+const historyList =
+    document.getElementById("historyList");
+
+
+/* =========================
+   履歴読み込み
+========================= */
+
+let history =
+    JSON.parse(
+        localStorage.getItem("calculatorHistory")
+    ) || [];
+
+
+/* =========================
+   計算
+========================= */
+
+function calculate() {
+
+    const expression =
+        expressionInput.value.trim();
+
+
+    if (expression === "") {
+        return;
+    }
+
+
+    try {
+
+        /*
+         * 使用可能な文字を制限
+         */
+
+        if (
+            !/^[0-9+\-*/().\s]+$/.test(expression)
+        ) {
+
+            throw new Error();
+
+        }
+
+
+        /*
+         * 計算式を計算
+         */
+
+        const calculation =
+            Function(
+                '"use strict"; return (' +
+                expression +
+                ')'
+            )();
+
+
+        if (
+            typeof calculation !== "number" ||
+            !Number.isFinite(calculation)
+        ) {
+
+            throw new Error();
+
+        }
+
+
+        /*
+         * 0.8倍
+         */
+
+        const answer =
+            calculation * MULTIPLIER;
+
+
+        const formattedAnswer =
+            formatNumber(answer);
+
+
+        /*
+         * 結果表示
+         */
+
+        result.textContent =
+            formattedAnswer;
+
+
+        /*
+         * 履歴追加
+         */
+
+        addHistory(
+            expression,
+            formattedAnswer
+        );
+
+
+    } catch {
+
+        result.textContent =
+            "計算できません";
+
+    }
+
+}
+
+
+/* =========================
+   数値の表示
+========================= */
+
+function formatNumber(number) {
+
+    return Number(
+        number.toPrecision(15)
+    ).toString();
+
+}
+
+
+/* =========================
+   履歴追加
+========================= */
+
+function addHistory(
+    expression,
+    answer
+) {
+
+    history.unshift({
+
+        expression: expression,
+
+        answer: answer
+
+    });
+
+
+    /*
+     * 最大100件
+     */
+
+    if (history.length > 100) {
+
+        history =
+            history.slice(0, 100);
+
+    }
+
+
+    saveHistory();
+
+    displayHistory();
+
+}
+
+
+/* =========================
+   履歴保存
+========================= */
+
+function saveHistory() {
+
+    localStorage.setItem(
+        "calculatorHistory",
+        JSON.stringify(history)
+    );
+
+}
+
+
+/* =========================
+   履歴表示
+========================= */
+
+function displayHistory() {
+
+    historyList.innerHTML = "";
+
+
+    if (history.length === 0) {
+
+        historyList.innerHTML =
+            '<div class="empty-history">履歴はありません</div>';
+
+        return;
+
+    }
+
+
+    history.forEach(
+        function(item, index) {
+
+            const historyItem =
+                document.createElement("div");
+
+            historyItem.className =
+                "history-item";
+
+
+            const calculation =
+                document.createElement("div");
+
+            calculation.className =
+                "calculation";
+
+
+            calculation.textContent =
+                item.expression +
+                " × 0.8 = " +
+                item.answer;
+
+
+            /*
+             * 個別削除
+             */
+
+            const deleteButton =
+                document.createElement("button");
+
+            deleteButton.className =
+                "delete-item";
+
+            deleteButton.textContent =
+                "削除";
+
+
+            deleteButton.onclick =
+                function() {
+
+                    history.splice(index, 1);
+
+                    saveHistory();
+
+                    displayHistory();
+
+                };
+
+
+            historyItem.appendChild(
+                calculation
+            );
+
+            historyItem.appendChild(
+                deleteButton
+            );
+
+
+            historyList.appendChild(
+                historyItem
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================
+   履歴全消去
+========================= */
+
+function deleteAllHistory() {
+
+    if (history.length === 0) {
+        return;
+    }
+
+
+    if (
+        confirm(
+            "計算履歴をすべて削除しますか？"
+        )
+    ) {
+
+        history = [];
+
+        saveHistory();
+
+        displayHistory();
+
+    }
+
+}
+
+
+/* =========================
+   クリア
+========================= */
+
+function clearInput() {
+
+    expressionInput.value = "";
+
+    result.textContent = "—";
+
+    expressionInput.focus();
+
+}
+
+
+/* =========================
+   Enterで計算
+========================= */
+
+expressionInput.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "Enter") {
+
+            calculate();
+
+        }
+
+    }
+);
+
+
+/* =========================
+   起動時に履歴表示
+========================= */
+
+displayHistory();
+
+</script>
+
+</body>
+</html>
